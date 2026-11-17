@@ -1,0 +1,275 @@
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap');
+
+:root {
+  --bg: #E8EBEE;
+  --surface: #F6F7F8;
+  --ink: #101418;
+  --muted: #566069;
+  --line: #C5CBD1;
+  --accent: #2B3CFF;
+  --accent-ink: #FFFFFF;
+  --ok: #0A7A4B;
+  --bad: #B3261E;
+  --warn: #8A5A00;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+html {
+  scroll-padding-top: env(safe-area-inset-top, 0px);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 16px/1.55 "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+main {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 40px 20px 56px;
+}
+
+h1 {
+  font: 800 clamp(2.4rem, 6vw, 4rem)/1 "Bricolage Grotesque", "Arial Narrow", system-ui, sans-serif;
+  letter-spacing: -0.03em;
+  margin: 0 0 12px;
+}
+
+.lead {
+  color: var(--muted);
+  max-width: 52ch;
+  margin: 0 0 32px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 760px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.drop {
+  position: relative;
+  aspect-ratio: 1/1;
+  background: var(--surface);
+  border: 2px dashed var(--line);
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 56px;
+  text-align: center;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.drop:hover,
+.drop:focus-visible,
+.drop.over {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.drop:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.drop.over {
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+}
+
+.f {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border: 7px solid var(--ink);
+  pointer-events: none;
+}
+
+.f::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  background: var(--ink);
+}
+
+.f.a {
+  top: 12px;
+  left: 12px;
+}
+
+.f.b {
+  top: 12px;
+  right: 12px;
+}
+
+.f.c {
+  bottom: 12px;
+  left: 12px;
+}
+
+.drop p {
+  margin: 0;
+  max-width: 24ch;
+}
+
+.drop strong {
+  display: block;
+  font: 800 1.5rem/1.15 "Bricolage Grotesque", system-ui, sans-serif;
+  margin-bottom: 6px;
+}
+
+.drop small {
+  color: var(--muted);
+}
+
+canvas {
+  max-width: 100%;
+  max-height: 100%;
+  display: none;
+  border-radius: 2px;
+}
+
+.has-img canvas {
+  display: block;
+}
+
+.has-img #empty {
+  display: none;
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 24px;
+  min-height: 200px;
+}
+
+.idle {
+  color: var(--muted);
+  margin: 0;
+}
+
+.type {
+  font: 800 1.9rem/1.1 "Bricolage Grotesque", system-ui, sans-serif;
+  margin: 0 0 4px;
+}
+
+.sub {
+  color: var(--muted);
+  margin: 0 0 20px;
+  font-size: 0.95rem;
+}
+
+dl {
+  margin: 0 0 20px;
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 8px 16px;
+}
+
+dt {
+  color: var(--muted);
+}
+
+dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-weight: 500;
+}
+
+.raw {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 12px;
+  font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  max-height: 180px;
+  overflow: auto;
+  margin: 0 0 16px;
+}
+
+.note {
+  border-left: 4px solid var(--warn);
+  padding: 4px 0 4px 12px;
+  margin: 0 0 16px;
+  color: var(--warn);
+  font-size: 0.95rem;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+button,
+.btn {
+  font: 600 15px "Instrument Sans", system-ui, sans-serif;
+  padding: 10px 16px;
+  border-radius: 4px;
+  border: 1.5px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+
+button:hover,
+.btn:hover {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+button.primary,
+.btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+button.primary:hover,
+.btn.primary:hover {
+  filter: brightness(1.1);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+button:focus-visible,
+.btn:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.err {
+  color: var(--bad);
+  font-weight: 600;
+  margin: 0;
+}
+
+.live {
+  min-height: 1.4em;
+  color: var(--ok);
+  font-size: 0.9rem;
+  margin: 10px 0 0;
+}
