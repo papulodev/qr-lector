@@ -55,7 +55,7 @@ function App() {
       const c = document.createElement('canvas')
       c.width = w
       c.height = h
-      const ctx = c.getContext('2d', { willReadFrequently: true } as any)
+      const ctx = c.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D | null
       if (!ctx) continue
       ctx.drawImage(img, 0, 0, w, h)
       const imageData = ctx.getImageData(0, 0, w, h)
