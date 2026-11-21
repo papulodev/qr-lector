@@ -1,20 +1,24 @@
 import { useRef, useState } from 'react'
 import DropZone from './components/DropZone'
-import jsQR from 'jsqr'
+import CameraScanner from './components/CameraScanner'
 import ResultPanel from './components/ResultPanel'
 import HistoryPanel from './components/HistoryPanel'
 import ConfirmOpenModal from './components/ConfirmOpenModal'
+import { decodeImage } from './utils/decodeQR'
 import { parseQR } from './utils/parseQR'
 import { saveToHistory } from './utils/history'
 import type { QRResult } from './types/qr'
 import type { HistoryItem } from './types/history'
 import './App.css'
 
+type ScanMode = 'image' | 'camera'
+
 function App() {
   const dropRef = useRef<HTMLDivElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
+  const [mode, setMode] = useState<ScanMode>('image')
   const [hasImg, setHasImg] = useState(false)
   const [result, setResult] = useState<QRResult | null>(null)
   const [error, setError] = useState<string>('')
@@ -46,25 +50,30 @@ function App() {
     img.src = url
   }
 
-  const decodeImage = (img: HTMLImageElement): { result: QRResult; scale: number } | null => {
-    for (const m of [1600, 900, 500]) {
-      const maxDim = Math.max(img.width, img.height)
-      const s = Math.min(1, m / maxDim)
-      const w = Math.round(img.width * s)
-      const h = Math.round(img.height * s)
-      const c = document.createElement('canvas')
-      c.width = w
-      c.height = h
-      const ctx = c.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D | null
-      if (!ctx) continue
-      ctx.drawImage(img, 0, 0, w, h)
-      const imageData = ctx.getImageData(0, 0, w, h)
-      const r = jsQR(imageData.data, w, h, { inversionAttempts: 'attemptBoth' })
-      if (r) {
-        return { result: { data: r.data, version: r.version, location: r.location }, scale: s }
-      }
-    }
-    return null
+  const registerResult = (found: QRResult) => {
+    setResult(found)
+    setError('')
+    setCopied('')
+    const parsedHit = parseQR(found.data)
+    saveToHistory({
+      data: found.data,
+      parsedType: parsedHit.type,
+      parsedSub: parsedHit.sub,
+      link: parsedHit.link,
+    })
+    setHistoryKey((k) => k + 1)
+  }
+
+  const handleCameraDetect = (found: QRResult) => {
+    setHasImg(false)
+    registerResult(found)
+  }
+
+  const switchMode = (next: ScanMode) => {
+    setMode(next)
+    setError('')
+    setCopied('')
+    if (next === 'camera') setHasImg(false)
   }
 
   const processImage = (img: HTMLImageElement) => {
@@ -85,17 +94,8 @@ function App() {
       setResult(null)
       return
     }
-    setError('')
-    setResult(hit.result)
-    const parsedHit = parseQR(hit.result.data)
-    saveToHistory({
-      data: hit.result.data,
-      parsedType: parsedHit.type,
-      parsedSub: parsedHit.sub,
-      link: parsedHit.link,
-    })
-    setHistoryKey((k) => k + 1)
-    if (hit && ctx && cv) {
+    registerResult(hit.result)
+    if (ctx && cv) {
       const L = hit.result.location
       const k = p / hit.scale
       const pts = [L.topLeftCorner, L.topRightCorner, L.bottomRightCorner, L.bottomLeftCorner]
@@ -209,35 +209,49 @@ function App() {
       <main>
         <h1>Lector de QR</h1>
         <p className="lead">
-          Cargá una imagen con un código QR y mirá qué contiene. Todo se procesa en tu navegador: la imagen no
-          se sube a ningún servidor.
+          Cargá una imagen con un código QR o escanealo con la cámara y mirá qué contiene. Todo se procesa en tu
+          navegador: ni la imagen ni el video se suben a ningún servidor.
         </p>
+        <div className="mode-switch" role="group" aria-label="Modo de escaneo">
+          <button type="button" aria-pressed={mode === 'image'} onClick={() => switchMode('image')}>
+            Desde imagen
+          </button>
+          <button type="button" aria-pressed={mode === 'camera'} onClick={() => switchMode('camera')}>
+            Con cámara
+          </button>
+        </div>
         <div className="grid">
           <div>
-            <DropZone
-              ref={dropRef}
-              hasImg={hasImg}
-              onClick={() => fileRef.current?.click()}
-              onKeyDown={onKeyDown}
-              onDragEnter={onDragOver}
-              onDragOver={onDragOver}
-              onDragLeave={onDragLeave}
-              onDrop={onDrop}
-              onPaste={onPaste}
-              canvasRef={canvasRef as React.RefObject<HTMLCanvasElement>}
-            />
-            <input
-              id="file"
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              hidden
-              onChange={(e) => {
-                const f = e.target.files?.[0]
-                if (f) handleFile(f)
-                e.target.value = ''
-              }}
-            />
+            {mode === 'image' ? (
+              <>
+                <DropZone
+                  ref={dropRef}
+                  hasImg={hasImg}
+                  onClick={() => fileRef.current?.click()}
+                  onKeyDown={onKeyDown}
+                  onDragEnter={onDragOver}
+                  onDragOver={onDragOver}
+                  onDragLeave={onDragLeave}
+                  onDrop={onDrop}
+                  onPaste={onPaste}
+                  canvasRef={canvasRef as React.RefObject<HTMLCanvasElement>}
+                />
+                <input
+                  id="file"
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={(e) => {
+                    const f = e.target.files?.[0]
+                    if (f) handleFile(f)
+                    e.target.value = ''
+                  }}
+                />
+              </>
+            ) : (
+              <CameraScanner onDetect={handleCameraDetect} />
+            )}
           </div>
           <ResultPanel result={result} error={error} parsed={parsed} copied={copied} onCopy={copyContent} onRequestOpen={requestOpen} />
         </div>
