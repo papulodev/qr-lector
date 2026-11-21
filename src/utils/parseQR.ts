@@ -69,13 +69,13 @@ export function parseQR(d: string): ParsedResult {
     return { type: 'Correo electrónico', sub: decodeURIComponent(a), fields: f }
   }
   if (/^tel:/i.test(t)) return { type: 'Teléfono', sub: t.slice(4), fields: [['Número', t.slice(4)]] }
-  if (/^smsto?:/i.test(t)) {
-    const cleaned = t.replace(/^smsto?:/i, '')
+  if (/^sms(?:to)?:/i.test(t)) {
+    const cleaned = t.replace(/^sms(?:to)?:/i, '')
     const parts = cleaned.split(/[:?]/)
     const n = parts[0]
     const f: Array<[string, string]> = [['Número', n]]
     if (parts.length > 1) {
-      const msg = parts.slice(1).join(':').replace(/^body=/, '')
+      const msg = decodeURIComponent(parts.slice(1).join(':').replace(/^body=/, ''))
       if (msg) f.push(['Mensaje', msg])
     }
     return { type: 'SMS', sub: n, fields: f }

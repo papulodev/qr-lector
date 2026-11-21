@@ -33,5 +33,7 @@ export function saveToHistory(item: Omit<HistoryItem, 'id' | 'date'>) {
 export function clearHistory() {
   try {
     localStorage.removeItem(KEY)
-  } catch {}
+  } catch {
+    // ignore storage errors
+  }
 }

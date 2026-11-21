@@ -8,7 +8,7 @@ interface DropZoneProps {
   onDragOver: (e: React.DragEvent) => void
   onDragLeave: (e: React.DragEvent) => void
   onDrop: (e: React.DragEvent) => void
-  onPaste: (e: React.ClipboardEvent) => void
+  onPaste: (e: React.ClipboardEvent<HTMLDivElement>) => void
   canvasRef: React.RefObject<HTMLCanvasElement>
 }
 
@@ -28,7 +28,7 @@ const DropZone = forwardRef<HTMLDivElement, DropZoneProps>(
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
         onDrop={onDrop}
-        onPaste={onPaste as any}
+        onPaste={onPaste}
       >
         <span className="f a"></span>
         <span className="f b"></span>

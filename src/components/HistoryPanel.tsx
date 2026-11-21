@@ -8,7 +8,6 @@ interface HistoryPanelProps {
 
 function HistoryPanel({ onSelect }: HistoryPanelProps) {
   const [items, setItems] = useState<HistoryItem[]>(loadHistory())
-
   const refresh = () => setItems(loadHistory())
 
   const handleClear = () => {
