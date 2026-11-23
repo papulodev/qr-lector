@@ -4,7 +4,7 @@ import CameraScanner from './components/CameraScanner'
 import ResultPanel from './components/ResultPanel'
 import HistoryPanel from './components/HistoryPanel'
 import ConfirmOpenModal from './components/ConfirmOpenModal'
-import { decodeImage } from './utils/decodeQR'
+import QRGenerator from './components/QRGenerator'
 import { parseQR } from './utils/parseQR'
 import { saveToHistory } from './utils/history'
 import type { QRResult } from './types/qr'
@@ -26,6 +26,7 @@ function App() {
   const [pendingUrl, setPendingUrl] = useState<string>('')
   const [showModal, setShowModal] = useState(false)
   const [historyKey, setHistoryKey] = useState(0)
+  const [activeTab, setActiveTab] = useState<'scan' | 'generate'>('scan')
 
   const handleFile = (f: File) => {
     setError('')
@@ -207,23 +208,35 @@ function App() {
   return (
     <>
       <main>
-        <h1>Lector de QR</h1>
+        <h1>Lector y generador de QR</h1>
         <p className="lead">
-          Cargá una imagen con un código QR o escanealo con la cámara y mirá qué contiene. Todo se procesa en tu
-          navegador: ni la imagen ni el video se suben a ningún servidor.
+          Escaneá una imagen con un código QR o generá el tuyo. Todo se procesa en tu navegador: nada se sube a
+          ningún servidor.
         </p>
-        <div className="mode-switch" role="group" aria-label="Modo de escaneo">
-          <button type="button" aria-pressed={mode === 'image'} onClick={() => switchMode('image')}>
-            Desde imagen
+        <div className="tabs" role="tablist" aria-label="Herramientas QR">
+          <button
+            id="tab-scan"
+            role="tab"
+            aria-selected={activeTab === 'scan'}
+            aria-controls="panel-scan"
+            onClick={() => setActiveTab('scan')}
+          >
+            Escanear QR
           </button>
-          <button type="button" aria-pressed={mode === 'camera'} onClick={() => switchMode('camera')}>
-            Con cámara
+          <button
+            id="tab-generate"
+            role="tab"
+            aria-selected={activeTab === 'generate'}
+            aria-controls="panel-generate"
+            onClick={() => setActiveTab('generate')}
+          >
+            Generar QR
           </button>
         </div>
-        <div className="grid">
-          <div>
-            {mode === 'image' ? (
-              <>
+        {activeTab === 'scan' ? (
+          <div id="panel-scan" role="tabpanel" aria-labelledby="tab-scan">
+            <div className="grid">
+              <div>
                 <DropZone
                   ref={dropRef}
                   hasImg={hasImg}
@@ -248,14 +261,16 @@ function App() {
                     e.target.value = ''
                   }}
                 />
-              </>
-            ) : (
-              <CameraScanner onDetect={handleCameraDetect} />
-            )}
+              </div>
+              <ResultPanel result={result} error={error} parsed={parsed} copied={copied} onCopy={copyContent} onRequestOpen={requestOpen} />
+            </div>
+            <HistoryPanel key={historyKey} onSelect={onSelectHistory} />
           </div>
-          <ResultPanel result={result} error={error} parsed={parsed} copied={copied} onCopy={copyContent} onRequestOpen={requestOpen} />
-        </div>
-        <HistoryPanel key={historyKey} onSelect={onSelectHistory} />
+        ) : (
+          <div id="panel-generate" role="tabpanel" aria-labelledby="tab-generate">
+            <QRGenerator />
+          </div>
+        )}
       </main>
       <ConfirmOpenModal url={pendingUrl} open={showModal} onConfirm={confirmOpen} onCancel={cancelOpen} />
     </>
