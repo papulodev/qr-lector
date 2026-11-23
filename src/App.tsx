@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import DropZone from './components/DropZone'
-import jsQR from 'jsqr'
+import CameraScanner from './components/CameraScanner'
 import ResultPanel from './components/ResultPanel'
 import HistoryPanel from './components/HistoryPanel'
 import ConfirmOpenModal from './components/ConfirmOpenModal'
@@ -11,11 +11,14 @@ import type { QRResult } from './types/qr'
 import type { HistoryItem } from './types/history'
 import './App.css'
 
+type ScanMode = 'image' | 'camera'
+
 function App() {
   const dropRef = useRef<HTMLDivElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
+  const [mode, setMode] = useState<ScanMode>('image')
   const [hasImg, setHasImg] = useState(false)
   const [result, setResult] = useState<QRResult | null>(null)
   const [error, setError] = useState<string>('')
@@ -48,25 +51,30 @@ function App() {
     img.src = url
   }
 
-  const decodeImage = (img: HTMLImageElement): { result: QRResult; scale: number } | null => {
-    for (const m of [1600, 900, 500]) {
-      const maxDim = Math.max(img.width, img.height)
-      const s = Math.min(1, m / maxDim)
-      const w = Math.round(img.width * s)
-      const h = Math.round(img.height * s)
-      const c = document.createElement('canvas')
-      c.width = w
-      c.height = h
-      const ctx = c.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D | null
-      if (!ctx) continue
-      ctx.drawImage(img, 0, 0, w, h)
-      const imageData = ctx.getImageData(0, 0, w, h)
-      const r = jsQR(imageData.data, w, h, { inversionAttempts: 'attemptBoth' })
-      if (r) {
-        return { result: { data: r.data, version: r.version, location: r.location }, scale: s }
-      }
-    }
-    return null
+  const registerResult = (found: QRResult) => {
+    setResult(found)
+    setError('')
+    setCopied('')
+    const parsedHit = parseQR(found.data)
+    saveToHistory({
+      data: found.data,
+      parsedType: parsedHit.type,
+      parsedSub: parsedHit.sub,
+      link: parsedHit.link,
+    })
+    setHistoryKey((k) => k + 1)
+  }
+
+  const handleCameraDetect = (found: QRResult) => {
+    setHasImg(false)
+    registerResult(found)
+  }
+
+  const switchMode = (next: ScanMode) => {
+    setMode(next)
+    setError('')
+    setCopied('')
+    if (next === 'camera') setHasImg(false)
   }
 
   const processImage = (img: HTMLImageElement) => {
@@ -87,17 +95,8 @@ function App() {
       setResult(null)
       return
     }
-    setError('')
-    setResult(hit.result)
-    const parsedHit = parseQR(hit.result.data)
-    saveToHistory({
-      data: hit.result.data,
-      parsedType: parsedHit.type,
-      parsedSub: parsedHit.sub,
-      link: parsedHit.link,
-    })
-    setHistoryKey((k) => k + 1)
-    if (hit && ctx && cv) {
+    registerResult(hit.result)
+    if (ctx && cv) {
       const L = hit.result.location
       const k = p / hit.scale
       const pts = [L.topLeftCorner, L.topRightCorner, L.bottomRightCorner, L.bottomLeftCorner]
