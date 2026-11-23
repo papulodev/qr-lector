@@ -1,6 +1,17 @@
 # React + TypeScript + Vite
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Browser-only QR reader and generator. Images and payloads stay in the browser; nothing is uploaded.
+
+## Generate a QR code
+
+1. Open the "Generar QR" tab.
+2. Pick a format: URL, text, Wi-Fi, contact (vCard), email, or phone.
+3. Fill in the fields. The preview updates as you type.
+4. Choose "Descargar PNG" or "Descargar JPG".
+
+URLs without a scheme get `https://` automatically, and downloaded images use an opaque white background.
+
+## Vite template notes
 
 Currently, two official plugins are available:
 

@@ -4,6 +4,7 @@ import jsQR from 'jsqr'
 import ResultPanel from './components/ResultPanel'
 import HistoryPanel from './components/HistoryPanel'
 import ConfirmOpenModal from './components/ConfirmOpenModal'
+import QRGenerator from './components/QRGenerator'
 import { parseQR } from './utils/parseQR'
 import { saveToHistory } from './utils/history'
 import type { QRResult } from './types/qr'
@@ -22,6 +23,7 @@ function App() {
   const [pendingUrl, setPendingUrl] = useState<string>('')
   const [showModal, setShowModal] = useState(false)
   const [historyKey, setHistoryKey] = useState(0)
+  const [activeTab, setActiveTab] = useState<'scan' | 'generate'>('scan')
 
   const handleFile = (f: File) => {
     setError('')
@@ -207,41 +209,69 @@ function App() {
   return (
     <>
       <main>
-        <h1>Lector de QR</h1>
+        <h1>Lector y generador de QR</h1>
         <p className="lead">
-          Cargá una imagen con un código QR y mirá qué contiene. Todo se procesa en tu navegador: la imagen no
-          se sube a ningún servidor.
+          Escaneá una imagen con un código QR o generá el tuyo. Todo se procesa en tu navegador: nada se sube a
+          ningún servidor.
         </p>
-        <div className="grid">
-          <div>
-            <DropZone
-              ref={dropRef}
-              hasImg={hasImg}
-              onClick={() => fileRef.current?.click()}
-              onKeyDown={onKeyDown}
-              onDragEnter={onDragOver}
-              onDragOver={onDragOver}
-              onDragLeave={onDragLeave}
-              onDrop={onDrop}
-              onPaste={onPaste}
-              canvasRef={canvasRef as React.RefObject<HTMLCanvasElement>}
-            />
-            <input
-              id="file"
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              hidden
-              onChange={(e) => {
-                const f = e.target.files?.[0]
-                if (f) handleFile(f)
-                e.target.value = ''
-              }}
-            />
-          </div>
-          <ResultPanel result={result} error={error} parsed={parsed} copied={copied} onCopy={copyContent} onRequestOpen={requestOpen} />
+        <div className="tabs" role="tablist" aria-label="Herramientas QR">
+          <button
+            id="tab-scan"
+            role="tab"
+            aria-selected={activeTab === 'scan'}
+            aria-controls="panel-scan"
+            onClick={() => setActiveTab('scan')}
+          >
+            Escanear QR
+          </button>
+          <button
+            id="tab-generate"
+            role="tab"
+            aria-selected={activeTab === 'generate'}
+            aria-controls="panel-generate"
+            onClick={() => setActiveTab('generate')}
+          >
+            Generar QR
+          </button>
         </div>
-        <HistoryPanel key={historyKey} onSelect={onSelectHistory} />
+        {activeTab === 'scan' ? (
+          <div id="panel-scan" role="tabpanel" aria-labelledby="tab-scan">
+            <div className="grid">
+              <div>
+                <DropZone
+                  ref={dropRef}
+                  hasImg={hasImg}
+                  onClick={() => fileRef.current?.click()}
+                  onKeyDown={onKeyDown}
+                  onDragEnter={onDragOver}
+                  onDragOver={onDragOver}
+                  onDragLeave={onDragLeave}
+                  onDrop={onDrop}
+                  onPaste={onPaste}
+                  canvasRef={canvasRef as React.RefObject<HTMLCanvasElement>}
+                />
+                <input
+                  id="file"
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={(e) => {
+                    const f = e.target.files?.[0]
+                    if (f) handleFile(f)
+                    e.target.value = ''
+                  }}
+                />
+              </div>
+              <ResultPanel result={result} error={error} parsed={parsed} copied={copied} onCopy={copyContent} onRequestOpen={requestOpen} />
+            </div>
+            <HistoryPanel key={historyKey} onSelect={onSelectHistory} />
+          </div>
+        ) : (
+          <div id="panel-generate" role="tabpanel" aria-labelledby="tab-generate">
+            <QRGenerator />
+          </div>
+        )}
       </main>
       <ConfirmOpenModal url={pendingUrl} open={showModal} onConfirm={confirmOpen} onCancel={cancelOpen} />
     </>
