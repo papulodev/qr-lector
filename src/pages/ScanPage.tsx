@@ -13,11 +13,16 @@ import { saveToHistory } from '../utils/history'
 import type { QRResult } from '../types/qr'
 import type { HistoryItem } from '../types/history'
 
+type DecodeHit = { result: QRResult; scale: number }
+type Preview = { img: HTMLImageElement; hit: DecodeHit | null }
+
 function ScanPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const previewRef = useRef<Preview | null>(null)
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [hasImg, setHasImg] = useState(false)
+  const [previewVersion, setPreviewVersion] = useState(0)
   const [result, setResult] = useState<QRResult | null>(null)
   const [error, setError] = useState<string>('')
   const [copied, setCopied] = useState<string>('')
@@ -25,7 +30,7 @@ function ScanPage() {
   const [showModal, setShowModal] = useState(false)
   const [historyKey, setHistoryKey] = useState(0)
 
-  const decodeImage = useCallback((img: HTMLImageElement): { result: QRResult; scale: number } | null => {
+  const decodeImage = useCallback((img: HTMLImageElement): DecodeHit | null => {
     for (const m of [1600, 900, 500]) {
       const maxDim = Math.max(img.width, img.height)
       const s = Math.min(1, m / maxDim)
@@ -46,19 +51,50 @@ function ScanPage() {
     return null
   }, [])
 
-  const processImage = useCallback((img: HTMLImageElement) => {
-    const hit = decodeImage(img)
+  const drawPreview = useCallback(() => {
+    const preview = previewRef.current
     const cv = canvasRef.current
-    if (!cv) return
+    if (!preview || !cv) return
+
+    const { img, hit } = preview
     const p = Math.min(1, 800 / Math.max(img.width, img.height))
     cv.width = Math.round(img.width * p)
     cv.height = Math.round(img.height * p)
     const ctx = cv.getContext('2d')
-    if (ctx) {
-      ctx.clearRect(0, 0, cv.width, cv.height)
-      ctx.drawImage(img, 0, 0, cv.width, cv.height)
-    }
+    if (!ctx) return
+
+    ctx.clearRect(0, 0, cv.width, cv.height)
+    ctx.drawImage(img, 0, 0, cv.width, cv.height)
+    if (!hit) return
+
+    const L = hit.result.location
+    const k = p / hit.scale
+    const pts = [L.topLeftCorner, L.topRightCorner, L.bottomRightCorner, L.bottomLeftCorner]
+    const accent = getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim()
+      || getComputedStyle(cv).color
+    ctx.lineWidth = Math.max(3, cv.width / 120)
+    ctx.strokeStyle = accent
+    ctx.beginPath()
+    pts.forEach((pt, i) => {
+      const x = pt.x * k
+      const y = pt.y * k
+      if (i === 0) ctx.moveTo(x, y)
+      else ctx.lineTo(x, y)
+    })
+    ctx.closePath()
+    ctx.stroke()
+  }, [])
+
+  useEffect(() => {
+    if (hasImg) drawPreview()
+  }, [hasImg, previewVersion, drawPreview])
+
+  const processImage = useCallback((img: HTMLImageElement) => {
+    const hit = decodeImage(img)
+    previewRef.current = { img, hit }
+    setPreviewVersion((version) => version + 1)
     setHasImg(true)
+
     if (!hit) {
       setError('No encontramos un código QR en la imagen. Probá con una foto más nítida y que el QR ocupe buena parte del encuadre.')
       setResult(null)
@@ -74,24 +110,6 @@ function ScanPage() {
       link: parsedHit.link,
     })
     setHistoryKey((k) => k + 1)
-    if (hit && ctx && cv) {
-      const L = hit.result.location
-      const k = p / hit.scale
-      const pts = [L.topLeftCorner, L.topRightCorner, L.bottomRightCorner, L.bottomLeftCorner]
-      const accent = getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim()
-        || getComputedStyle(cv).color
-      ctx.lineWidth = Math.max(3, cv.width / 120)
-      ctx.strokeStyle = accent
-      ctx.beginPath()
-      pts.forEach((pt, i) => {
-        const x = pt.x * k
-        const y = pt.y * k
-        if (i === 0) ctx.moveTo(x, y)
-        else ctx.lineTo(x, y)
-      })
-      ctx.closePath()
-      ctx.stroke()
-    }
   }, [decodeImage])
 
   const handleFile = useCallback((f: File) => {
@@ -184,6 +202,7 @@ function ScanPage() {
     setCopied('')
     setHasImg(false)
     setSelectedFile(null)
+    previewRef.current = null
     const cv = canvasRef.current
     if (cv) {
       const ctx = cv.getContext('2d')
