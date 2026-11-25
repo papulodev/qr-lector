@@ -1,4 +1,10 @@
 import { useState } from 'react'
+import { Button } from '@astryxdesign/core/Button'
+import { EmptyState } from '@astryxdesign/core/EmptyState'
+import { List, ListItem } from '@astryxdesign/core/List'
+import { Section } from '@astryxdesign/core/Section'
+import { HStack, VStack } from '@astryxdesign/core/Stack'
+import { Heading, Text } from '@astryxdesign/core/Text'
 import type { HistoryItem } from '../types/history'
 import { clearHistory, loadHistory } from '../utils/history'
 
@@ -15,49 +21,52 @@ function HistoryPanel({ onSelect }: HistoryPanelProps) {
     setItems([])
   }
 
-  if (items.length === 0) {
-    return (
-      <section className="panel" style={{ marginTop: '24px' }}>
-        <h2 style={{ font: '800 1.4rem/1.1 "Bricolage Grotesque", system-ui, sans-serif', margin: '0 0 8px' }}>Historial</h2>
-        <p className="idle">Aún no hay escaneos guardados.</p>
-      </section>
-    )
-  }
-
   return (
-    <section className="panel" style={{ marginTop: '24px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-        <h2 style={{ font: '800 1.4rem/1.1 "Bricolage Grotesque", system-ui, sans-serif', margin: 0 }}>Historial (últimos 50)</h2>
-        <button onClick={handleClear}>Limpiar</button>
-      </div>
-      <div style={{ display: 'grid', gap: '12px' }}>
-        {items.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => onSelect(item)}
-            style={{
-              textAlign: 'left',
-              border: '1px solid var(--line)',
-              borderRadius: '4px',
-              padding: '12px',
-              background: 'var(--bg)',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-              <strong>{item.parsedType}</strong>
-              <span style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>
-                {new Date(item.date).toLocaleString()}
-              </span>
-            </div>
-            <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginBottom: '6px' }}>{item.parsedSub}</div>
-            <div style={{ overflowWrap: 'anywhere', fontSize: '0.9rem' }}>{item.link || item.data}</div>
-          </button>
-        ))}
-      </div>
-      <button style={{ marginTop: '12px' }} onClick={refresh}>
-        Actualizar
-      </button>
-    </section>
+    <Section padding={5} aria-labelledby="history-heading">
+      <VStack gap={4}>
+        <HStack gap={2} wrap="wrap" justify="between" vAlign="center">
+          <Heading id="history-heading" level={2}>
+            {items.length > 0 ? `Historial (últimos ${items.length})` : 'Historial'}
+          </Heading>
+          <HStack gap={2} wrap="wrap">
+            {items.length > 0 && <Button label="Limpiar" variant="destructive" onClick={handleClear} />}
+            <Button label="Actualizar" onClick={refresh} />
+          </HStack>
+        </HStack>
+
+        {items.length === 0 ? (
+          <EmptyState
+            headingLevel={3}
+            isCompact
+            title="Historial vacío"
+            description="Los códigos QR que escanees aparecerán acá."
+            actions={<Button label="Escanear una imagen" href="/" variant="secondary" />}
+          />
+        ) : (
+          <List density="compact" hasDividers edge="flush">
+            {items.map((item) => (
+              <ListItem
+                key={item.id}
+                itemKey={item.id}
+                label={item.parsedType}
+                description={
+                  <VStack gap={0.5}>
+                    <Text type="supporting">{item.parsedSub}</Text>
+                    <Text type="code" wordBreak="break-all">{item.link || item.data}</Text>
+                  </VStack>
+                }
+                endContent={
+                  <Text type="supporting" color="secondary">
+                    {new Date(item.date).toLocaleString()}
+                  </Text>
+                }
+                onClick={() => onSelect(item)}
+              />
+            ))}
+          </List>
+        )}
+      </VStack>
+    </Section>
   )
 }
 

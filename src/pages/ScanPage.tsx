@@ -1,6 +1,10 @@
-import { useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import jsQR from 'jsqr'
-import DropZone from '../components/DropZone'
+import { FileInput } from '@astryxdesign/core/FileInput'
+import { Grid } from '@astryxdesign/core/Grid'
+import { Section } from '@astryxdesign/core/Section'
+import { VStack } from '@astryxdesign/core/Stack'
+import { Heading, Text } from '@astryxdesign/core/Text'
 import ResultPanel from '../components/ResultPanel'
 import HistoryPanel from '../components/HistoryPanel'
 import ConfirmOpenModal from '../components/ConfirmOpenModal'
@@ -10,10 +14,9 @@ import type { QRResult } from '../types/qr'
 import type { HistoryItem } from '../types/history'
 
 function ScanPage() {
-  const dropRef = useRef<HTMLDivElement>(null)
-  const fileRef = useRef<HTMLInputElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [hasImg, setHasImg] = useState(false)
   const [result, setResult] = useState<QRResult | null>(null)
   const [error, setError] = useState<string>('')
@@ -22,30 +25,7 @@ function ScanPage() {
   const [showModal, setShowModal] = useState(false)
   const [historyKey, setHistoryKey] = useState(0)
 
-  const handleFile = (f: File) => {
-    setError('')
-    setCopied('')
-    if (!f.type.startsWith('image/')) {
-      setError('El archivo no es una imagen. Probá con PNG, JPG o WebP.')
-      setResult(null)
-      setHasImg(false)
-      return
-    }
-    const url = URL.createObjectURL(f)
-    const img = new Image()
-    img.onload = () => {
-      URL.revokeObjectURL(url)
-      processImage(img)
-    }
-    img.onerror = () => {
-      setError('No se pudo abrir la imagen.')
-      setResult(null)
-      setHasImg(false)
-    }
-    img.src = url
-  }
-
-  const decodeImage = (img: HTMLImageElement): { result: QRResult; scale: number } | null => {
+  const decodeImage = useCallback((img: HTMLImageElement): { result: QRResult; scale: number } | null => {
     for (const m of [1600, 900, 500]) {
       const maxDim = Math.max(img.width, img.height)
       const s = Math.min(1, m / maxDim)
@@ -64,9 +44,9 @@ function ScanPage() {
       }
     }
     return null
-  }
+  }, [])
 
-  const processImage = (img: HTMLImageElement) => {
+  const processImage = useCallback((img: HTMLImageElement) => {
     const hit = decodeImage(img)
     const cv = canvasRef.current
     if (!cv) return
@@ -98,7 +78,8 @@ function ScanPage() {
       const L = hit.result.location
       const k = p / hit.scale
       const pts = [L.topLeftCorner, L.topRightCorner, L.bottomRightCorner, L.bottomLeftCorner]
-      const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#2B3CFF'
+      const accent = getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim()
+        || getComputedStyle(cv).color
       ctx.lineWidth = Math.max(3, cv.width / 120)
       ctx.strokeStyle = accent
       ctx.beginPath()
@@ -111,43 +92,52 @@ function ScanPage() {
       ctx.closePath()
       ctx.stroke()
     }
-  }
+  }, [decodeImage])
 
-  const onDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    dropRef.current?.classList.remove('over')
-    const f = e.dataTransfer.files?.[0]
-    if (f) handleFile(f)
-  }
-
-  const onDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-    dropRef.current?.classList.add('over')
-  }
-
-  const onDragLeave = (e: React.DragEvent) => {
-    e.preventDefault()
-    dropRef.current?.classList.remove('over')
-  }
-
-  const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault()
-      fileRef.current?.click()
+  const handleFile = useCallback((f: File) => {
+    setSelectedFile(f)
+    setError('')
+    setCopied('')
+    if (!f.type.startsWith('image/')) {
+      setError('El archivo no es una imagen. Probá con PNG, JPG o WebP.')
+      setResult(null)
+      setHasImg(false)
+      return
     }
-  }
+    const url = URL.createObjectURL(f)
+    const img = new Image()
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      processImage(img)
+    }
+    img.onerror = () => {
+      setError('No se pudo abrir la imagen.')
+      setResult(null)
+      setHasImg(false)
+    }
+    img.src = url
+  }, [processImage])
 
-  const onPaste = (e: React.ClipboardEvent) => {
-    const items = e.clipboardData?.items
-    if (!items) return
-    for (let i = 0; i < items.length; i++) {
-      const it = items[i]
-      if (it.type.startsWith('image/')) {
-        const f = it.getAsFile()
-        if (f) handleFile(f)
-        break
+  useEffect(() => {
+    const onPaste = (event: ClipboardEvent) => {
+      const items = event.clipboardData?.items
+      if (!items) return
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i]
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile()
+          if (file) handleFile(file)
+          break
+        }
       }
     }
+    window.addEventListener('paste', onPaste)
+    return () => window.removeEventListener('paste', onPaste)
+  }, [handleFile])
+
+  const handleFiles = (files: File | File[] | null) => {
+    const file = Array.isArray(files) ? files[0] : files
+    if (file) handleFile(file)
   }
 
   const copyContent = async () => {
@@ -193,6 +183,7 @@ function ScanPage() {
     setError('')
     setCopied('')
     setHasImg(false)
+    setSelectedFile(null)
     const cv = canvasRef.current
     if (cv) {
       const ctx = cv.getContext('2d')
@@ -204,46 +195,44 @@ function ScanPage() {
   const parsed = result ? parseQR(result.data) : null
 
   return (
-    <>
-      <main>
-        <h1>Lector de QR</h1>
-        <p className="lead">
+    <VStack gap={6}>
+      <VStack gap={2} maxWidth="70ch">
+        <Heading level={1}>Lector de QR</Heading>
+        <Text as="p" type="large" color="secondary">
           Cargá una imagen con un código QR y mirá qué contiene. Todo se procesa en tu navegador: la imagen no
           se sube a ningún servidor.
-        </p>
-        <div className="grid">
-          <div>
-            <DropZone
-              ref={dropRef}
-              hasImg={hasImg}
-              onClick={() => fileRef.current?.click()}
-              onKeyDown={onKeyDown}
-              onDragEnter={onDragOver}
-              onDragOver={onDragOver}
-              onDragLeave={onDragLeave}
-              onDrop={onDrop}
-              onPaste={onPaste}
-              canvasRef={canvasRef as React.RefObject<HTMLCanvasElement>}
-            />
-            <input
-              id="file"
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              hidden
-              onChange={(e) => {
-                const f = e.target.files?.[0]
-                if (f) handleFile(f)
-                e.target.value = ''
-              }}
-            />
-          </div>
-          <ResultPanel result={result} error={error} parsed={parsed} copied={copied} onCopy={copyContent} onRequestOpen={requestOpen} />
-        </div>
-        <HistoryPanel key={historyKey} onSelect={onSelectHistory} />
-      </main>
+        </Text>
+      </VStack>
+
+      <Grid columns={{ minWidth: 320, max: 2 }} gap={4} align="start">
+        <VStack gap={4}>
+          <FileInput
+            label="Imagen con código QR"
+            value={selectedFile}
+            onChange={handleFiles}
+            accept="image/*"
+            mode="dropzone"
+            description="Arrastrá una imagen, elegila o pegala con Ctrl+V."
+            status={error ? { type: 'error', message: error } : undefined}
+            statusVariant="detached"
+            width="100%"
+          />
+
+          {hasImg && (
+            <Section padding={4} aria-label="Vista previa de la imagen">
+              <VStack hAlign="center">
+                <canvas data-qr-canvas="" ref={canvasRef} aria-label="Vista previa de la imagen cargada" />
+              </VStack>
+            </Section>
+          )}
+        </VStack>
+        <ResultPanel result={result} error={error} parsed={parsed} copied={copied} onCopy={copyContent} onRequestOpen={requestOpen} />
+      </Grid>
+
+      <HistoryPanel key={historyKey} onSelect={onSelectHistory} />
+
       <ConfirmOpenModal url={pendingUrl} open={showModal} onConfirm={confirmOpen} onCancel={cancelOpen} />
-    </>
+    </VStack>
   )
 }
 

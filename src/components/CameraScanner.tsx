@@ -1,3 +1,8 @@
+import { Banner } from '@astryxdesign/core/Banner'
+import { Button } from '@astryxdesign/core/Button'
+import { Section } from '@astryxdesign/core/Section'
+import { HStack, VStack } from '@astryxdesign/core/Stack'
+import { Text } from '@astryxdesign/core/Text'
 import { useCameraScanner } from '../hooks/useCameraScanner'
 import type { QRResult } from '../types/qr'
 
@@ -15,50 +20,43 @@ function CameraScanner({ onDetect }: CameraScannerProps) {
     : ''
 
   return (
-    <section className="camera" aria-label="Escaneo con cámara">
-      <div className={`camera-view ${scanning ? 'active' : ''}`}>
-        <video ref={videoRef} playsInline muted autoPlay aria-label="Vista previa de la cámara" />
-        {!scanning && (
-          <p className="camera-idle">
-            {status === 'starting' ? 'Iniciando cámara…' : 'Iniciá la cámara y apuntá al código QR.'}
-          </p>
-        )}
-        {scanning && <span className="camera-frame" aria-hidden="true" />}
-      </div>
+    <Section padding={5} aria-label="Escaneo con cámara">
+      <VStack gap={4}>
+        <VStack data-camera-view="" hAlign="center" vAlign="center">
+          <video ref={videoRef} data-camera-video="" playsInline muted autoPlay aria-label="Vista previa de la cámara" />
+          {!scanning && (
+            <Text as="p" data-camera-idle="" type="supporting" color="secondary">
+              {status === 'starting' ? 'Iniciando cámara…' : 'Iniciá la cámara y apuntá al código QR.'}
+            </Text>
+          )}
+          {scanning && <VStack data-camera-frame="" aria-hidden="true" />}
+        </VStack>
 
-      <div className="camera-controls">
-        {scanning ? (
-          <>
-            {cameraCount > 1 && (
-              <button type="button" onClick={switchCamera}>
-                Cambiar cámara
-              </button>
-            )}
-            <button type="button" onClick={stop}>
-              Detener escaneo
-            </button>
-          </>
-        ) : (
-          <button
-            type="button"
-            className="primary"
-            onClick={() => start(facingMode)}
-            disabled={status === 'starting'}
-          >
-            {status === 'error' ? 'Reintentar' : status === 'starting' ? 'Iniciando…' : 'Iniciar cámara'}
-          </button>
-        )}
-      </div>
+        <HStack gap={2} wrap="wrap">
+          {scanning ? (
+            <>
+              {cameraCount > 1 && (
+                <Button label="Cambiar cámara" onClick={switchCamera} />
+              )}
+              <Button label="Detener escaneo" onClick={stop} />
+            </>
+          ) : (
+            <Button
+              label={status === 'error' ? 'Reintentar' : status === 'starting' ? 'Iniciando…' : 'Iniciar cámara'}
+              variant="primary"
+              isLoading={status === 'starting'}
+              onClick={() => start(facingMode)}
+            />
+          )}
+        </HStack>
 
-      <p className="camera-status" role="status" aria-live="polite">
-        {statusText}
-      </p>
-      {error && (
-        <p className="err" role="alert">
-          {error}
-        </p>
-      )}
-    </section>
+        <Text type="supporting" color="secondary" role="status" aria-live="polite">
+          {statusText}
+        </Text>
+
+        {error && <Banner status="error" title={error} container="section" />}
+      </VStack>
+    </Section>
   )
 }
 
