@@ -1,3 +1,10 @@
+import { Banner } from '@astryxdesign/core/Banner'
+import { Button } from '@astryxdesign/core/Button'
+import { CodeBlock } from '@astryxdesign/core/CodeBlock'
+import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog'
+import { MetadataList, MetadataListItem } from '@astryxdesign/core/MetadataList'
+import { HStack, VStack } from '@astryxdesign/core/Stack'
+import { Text } from '@astryxdesign/core/Text'
 import { getHostname, isShortenedUrl } from '../utils/urlSafety'
 
 interface ConfirmOpenModalProps {
@@ -8,55 +15,59 @@ interface ConfirmOpenModalProps {
 }
 
 function ConfirmOpenModal({ url, open, onConfirm, onCancel }: ConfirmOpenModalProps) {
-  if (!open) return null
   const isShort = isShortenedUrl(url)
   const host = getHostname(url)
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(16, 20, 24, 0.55)',
-        display: 'grid',
-        placeItems: 'center',
-        padding: '16px',
-        zIndex: 1000,
-      }}
-      onClick={onCancel}
+    <Dialog
+      isOpen={open}
+      onOpenChange={(isOpen) => { if (!isOpen) onCancel() }}
+      purpose="required"
+      width={520}
+      padding={5}
     >
-      <div
-        className="panel"
-        style={{ maxWidth: '520px', width: '100%', margin: 0 }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 style={{ font: '800 1.6rem/1.1 "Bricolage Grotesque", system-ui, sans-serif', margin: '0 0 8px' }}>
-          Abrir enlace
-        </h2>
-        <p style={{ color: 'var(--muted)', margin: '0 0 16px' }}>
-          Vas a abrir una URL externa. Revisala antes de continuar.
-        </p>
-        <div style={{ marginBottom: '12px' }}>
-          <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginBottom: '6px' }}>Dominio</div>
-          <div style={{ fontWeight: 600 }}>{host}</div>
-        </div>
-        <div style={{ marginBottom: '16px' }}>
-          <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginBottom: '6px' }}>URL completa</div>
-          <pre className="raw" style={{ maxHeight: '110px' }}>
-            {url}
-          </pre>
-        </div>
+      <VStack gap={4}>
+        <DialogHeader
+          title="Abrir enlace"
+          subtitle="Vas a abrir una URL externa. Revisala antes de continuar."
+          hasDivider={false}
+        />
+
+        <MetadataList label={{ position: 'start' }}>
+          <MetadataListItem label="Dominio">
+            <Text weight="semibold">{host}</Text>
+          </MetadataListItem>
+        </MetadataList>
+
+        <VStack gap={1}>
+          <Text type="label" color="secondary">URL completa</Text>
+          <CodeBlock
+            code={url}
+            title="URL completa"
+            size="sm"
+            isWrapped
+            hasLanguageLabel={false}
+            hasCopyButton={false}
+            container="section"
+            width="100%"
+          />
+        </VStack>
+
         {isShort && (
-          <p className="note">Este enlace usa un acortador ({host}). Puede redirigir a otra página con anuncios o trackers.</p>
+          <Banner
+            status="warning"
+            title="Este enlace usa un acortador"
+            description={`${host} puede redirigir a otra página con anuncios o trackers.`}
+            container="section"
+          />
         )}
-        <div className="row">
-          <button className="primary" onClick={onConfirm}>
-            Abrir de todas formas
-          </button>
-          <button onClick={onCancel}>Cancelar</button>
-        </div>
-      </div>
-    </div>
+
+        <HStack gap={2} hAlign="end" wrap="wrap">
+          <Button label="Cancelar" onClick={onCancel} />
+          <Button label="Abrir de todas formas" variant="primary" onClick={onConfirm} />
+        </HStack>
+      </VStack>
+    </Dialog>
   )
 }
 

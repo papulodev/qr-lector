@@ -1,4 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Banner } from '@astryxdesign/core/Banner'
+import { Button } from '@astryxdesign/core/Button'
+import { CheckboxInput } from '@astryxdesign/core/CheckboxInput'
+import { CodeBlock } from '@astryxdesign/core/CodeBlock'
+import { EmptyState } from '@astryxdesign/core/EmptyState'
+import { FormLayout } from '@astryxdesign/core/FormLayout'
+import { Grid } from '@astryxdesign/core/Grid'
+import { Section } from '@astryxdesign/core/Section'
+import { Selector } from '@astryxdesign/core/Selector'
+import { HStack, VStack } from '@astryxdesign/core/Stack'
+import { Heading, Text } from '@astryxdesign/core/Text'
+import { TextArea } from '@astryxdesign/core/TextArea'
+import { TextInput } from '@astryxdesign/core/TextInput'
 import type { QRFormValues, QRFormat, WiFiSecurity } from '../types/qrGenerator'
 import { buildQRPayload } from '../utils/qrPayloads'
 import { downloadQR, generateQRDataUrl, type QRImageFormat } from '../utils/qrExport'
@@ -68,206 +81,159 @@ function QRGenerator() {
   }
 
   return (
-    <section className="qr-generator" aria-labelledby="generate-heading">
-      <div className="panel">
-        <h2 id="generate-heading" className="type">Generar QR</h2>
-        <p className="sub">Elegí el formato, completá los datos y descargá el código.</p>
+    <Grid columns={{ minWidth: 320, max: 2 }} gap={4} align="start">
+      <Section padding={5} aria-labelledby="generate-heading">
+        <VStack gap={4}>
+          <VStack gap={0.5}>
+            <Heading id="generate-heading" level={2}>Generar QR</Heading>
+            <Text type="supporting" color="secondary">
+              Elegí el formato, completá los datos y descargá el código.
+            </Text>
+          </VStack>
 
-        <div className="field">
-          <label htmlFor="qr-format">Formato</label>
-          <select id="qr-format" value={format} onChange={(event) => setFormat(event.target.value as QRFormat)}>
-            {formats.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-        </div>
+          <form onSubmit={(event) => event.preventDefault()}>
+            <FormLayout>
+              <Selector
+                label="Formato"
+                options={formats}
+                value={format}
+                onChange={(value) => setFormat(value as QRFormat)}
+              />
 
-        {format === 'url' && (
-          <div className="field">
-            <label htmlFor="qr-url">URL</label>
-            <input
-              id="qr-url"
-              type="text"
-              value={values.url}
-              placeholder="ejemplo.com/ruta"
-              onChange={(event) => update({ url: event.target.value })}
+              {format === 'url' && (
+                <TextInput
+                  label="URL"
+                  type="url"
+                  value={values.url}
+                  placeholder="ejemplo.com/ruta"
+                  inputMode="url"
+                  onChange={(value) => update({ url: value })}
+                />
+              )}
+
+              {format === 'text' && (
+                <TextArea
+                  label="Texto"
+                  value={values.text}
+                  onChange={(value) => update({ text: value })}
+                />
+              )}
+
+              {format === 'wifi' && (
+                <>
+                  <TextInput
+                    label="Nombre de la red"
+                    value={values.wifi.ssid}
+                    onChange={(value) => updateWiFi({ ssid: value })}
+                  />
+                  <TextInput
+                    label="Contraseña"
+                    value={values.wifi.password}
+                    onChange={(value) => updateWiFi({ password: value })}
+                  />
+                  <Selector
+                    label="Seguridad"
+                    options={[
+                      { value: 'WPA', label: 'WPA/WPA2' },
+                      { value: 'WEP', label: 'WEP' },
+                      { value: 'nopass', label: 'Sin contraseña' },
+                    ]}
+                    value={values.wifi.security}
+                    onChange={(value) => updateWiFi({ security: value as WiFiSecurity })}
+                  />
+                  <CheckboxInput
+                    label="Red oculta"
+                    value={values.wifi.hidden}
+                    onChange={(checked) => updateWiFi({ hidden: checked })}
+                  />
+                </>
+              )}
+
+              {format === 'vcard' && (
+                <>
+                  <TextInput label="Nombre" value={values.vcard.name} onChange={(value) => updateVCard({ name: value })} />
+                  <TextInput label="Organización" value={values.vcard.organization} onChange={(value) => updateVCard({ organization: value })} />
+                  <TextInput label="Cargo" value={values.vcard.title} onChange={(value) => updateVCard({ title: value })} />
+                  <TextInput label="Teléfono" type="tel" value={values.vcard.phone} onChange={(value) => updateVCard({ phone: value })} />
+                  <TextInput label="Correo" type="email" value={values.vcard.email} onChange={(value) => updateVCard({ email: value })} />
+                  <TextInput label="Sitio web" type="url" value={values.vcard.website} onChange={(value) => updateVCard({ website: value })} />
+                </>
+              )}
+
+              {format === 'email' && (
+                <>
+                  <TextInput label="Para" type="email" value={values.email.to} onChange={(value) => updateEmail({ to: value })} />
+                  <TextInput label="Asunto" value={values.email.subject} onChange={(value) => updateEmail({ subject: value })} />
+                  <TextArea label="Mensaje" value={values.email.body} onChange={(value) => updateEmail({ body: value })} />
+                </>
+              )}
+
+              {format === 'phone' && (
+                <TextInput
+                  label="Número"
+                  type="tel"
+                  value={values.phone}
+                  placeholder="+5491112345678"
+                  onChange={(value) => update({ phone: value })}
+                />
+              )}
+            </FormLayout>
+          </form>
+
+          <HStack gap={2} wrap="wrap">
+            <Button
+              label="Descargar PNG"
+              variant="primary"
+              isDisabled={!payload}
+              onClick={() => handleDownload('png')}
             />
-          </div>
-        )}
-
-        {format === 'text' && (
-          <div className="field">
-            <label htmlFor="qr-text">Texto</label>
-            <textarea
-              id="qr-text"
-              value={values.text}
-              onChange={(event) => update({ text: event.target.value })}
+            <Button
+              label="Descargar JPG"
+              isDisabled={!payload}
+              onClick={() => handleDownload('jpg')}
             />
-          </div>
-        )}
+          </HStack>
 
-        {format === 'wifi' && (
-          <>
-            <div className="field">
-              <label htmlFor="qr-wifi-ssid">Nombre de la red</label>
-              <input
-                id="qr-wifi-ssid"
-                value={values.wifi.ssid}
-                onChange={(event) => updateWiFi({ ssid: event.target.value })}
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="qr-wifi-password">Contraseña</label>
-              <input
-                id="qr-wifi-password"
-                type="text"
-                value={values.wifi.password}
-                onChange={(event) => updateWiFi({ password: event.target.value })}
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="qr-wifi-security">Seguridad</label>
-              <select
-                id="qr-wifi-security"
-                value={values.wifi.security}
-                onChange={(event) => updateWiFi({ security: event.target.value as WiFiSecurity })}
-              >
-                <option value="WPA">WPA/WPA2</option>
-                <option value="WEP">WEP</option>
-                <option value="nopass">Sin contraseña</option>
-              </select>
-            </div>
-            <div className="field checkbox">
-              <input
-                id="qr-wifi-hidden"
-                type="checkbox"
-                checked={values.wifi.hidden}
-                onChange={(event) => updateWiFi({ hidden: event.target.checked })}
-              />
-              <label htmlFor="qr-wifi-hidden">Red oculta</label>
-            </div>
-          </>
-        )}
+          {error && <Banner status="error" title={error} container="section" />}
+          {status && <Banner status="success" title={status} container="section" />}
+        </VStack>
+      </Section>
 
-        {format === 'vcard' && (
-          <>
-            <div className="field">
-              <label htmlFor="qr-vcard-name">Nombre</label>
-              <input
-                id="qr-vcard-name"
-                value={values.vcard.name}
-                onChange={(event) => updateVCard({ name: event.target.value })}
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="qr-vcard-org">Organización</label>
-              <input
-                id="qr-vcard-org"
-                value={values.vcard.organization}
-                onChange={(event) => updateVCard({ organization: event.target.value })}
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="qr-vcard-title">Cargo</label>
-              <input
-                id="qr-vcard-title"
-                value={values.vcard.title}
-                onChange={(event) => updateVCard({ title: event.target.value })}
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="qr-vcard-phone">Teléfono</label>
-              <input
-                id="qr-vcard-phone"
-                value={values.vcard.phone}
-                onChange={(event) => updateVCard({ phone: event.target.value })}
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="qr-vcard-email">Correo</label>
-              <input
-                id="qr-vcard-email"
-                type="email"
-                value={values.vcard.email}
-                onChange={(event) => updateVCard({ email: event.target.value })}
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="qr-vcard-website">Sitio web</label>
-              <input
-                id="qr-vcard-website"
-                value={values.vcard.website}
-                onChange={(event) => updateVCard({ website: event.target.value })}
-              />
-            </div>
-          </>
-        )}
+      <Section padding={5} aria-labelledby="preview-heading">
+        <VStack gap={4}>
+          <VStack gap={0.5}>
+            <Heading id="preview-heading" level={2}>Vista previa</Heading>
+            <Text type="supporting" color="secondary">
+              Se actualiza mientras completás los datos.
+            </Text>
+          </VStack>
 
-        {format === 'email' && (
-          <>
-            <div className="field">
-              <label htmlFor="qr-email-to">Para</label>
-              <input
-                id="qr-email-to"
-                type="email"
-                value={values.email.to}
-                onChange={(event) => updateEmail({ to: event.target.value })}
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="qr-email-subject">Asunto</label>
-              <input
-                id="qr-email-subject"
-                value={values.email.subject}
-                onChange={(event) => updateEmail({ subject: event.target.value })}
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="qr-email-body">Mensaje</label>
-              <textarea
-                id="qr-email-body"
-                value={values.email.body}
-                onChange={(event) => updateEmail({ body: event.target.value })}
-              />
-            </div>
-          </>
-        )}
-
-        {format === 'phone' && (
-          <div className="field">
-            <label htmlFor="qr-phone">Número</label>
-            <input
-              id="qr-phone"
-              type="tel"
-              value={values.phone}
-              placeholder="+5491112345678"
-              onChange={(event) => update({ phone: event.target.value })}
+          {previewUrl ? (
+            <img data-qr-preview="" src={previewUrl} alt="Vista previa del código QR" />
+          ) : (
+            <EmptyState
+              headingLevel={3}
+              isCompact
+              title="Sin vista previa"
+              description="Completá los datos para ver el código QR."
             />
-          </div>
-        )}
+          )}
 
-        <div className="row">
-          <button className="primary" disabled={!payload} onClick={() => handleDownload('png')}>
-            Descargar PNG
-          </button>
-          <button disabled={!payload} onClick={() => handleDownload('jpg')}>
-            Descargar JPG
-          </button>
-        </div>
-        {error && <p className="err">{error}</p>}
-        <p className="live" role="status">{status}</p>
-      </div>
-
-      <div className="panel">
-        <h2 className="type">Vista previa</h2>
-        {previewUrl ? (
-          <img className="qr-preview" src={previewUrl} alt="Vista previa del código QR" />
-        ) : (
-          <p className="idle">Completá los datos para ver el código QR.</p>
-        )}
-        {payload && <pre className="raw qr-payload">{payload}</pre>}
-      </div>
-    </section>
+          {payload && (
+            <CodeBlock
+              code={payload}
+              title="Contenido del QR"
+              size="sm"
+              isWrapped
+              hasLanguageLabel={false}
+              hasCopyButton={false}
+              container="section"
+              width="100%"
+            />
+          )}
+        </VStack>
+      </Section>
+    </Grid>
   )
 }
 

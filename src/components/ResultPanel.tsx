@@ -1,4 +1,12 @@
 import { useState } from 'react'
+import { Banner } from '@astryxdesign/core/Banner'
+import { Button } from '@astryxdesign/core/Button'
+import { CodeBlock } from '@astryxdesign/core/CodeBlock'
+import { EmptyState } from '@astryxdesign/core/EmptyState'
+import { HStack, VStack } from '@astryxdesign/core/Stack'
+import { MetadataList, MetadataListItem } from '@astryxdesign/core/MetadataList'
+import { Section } from '@astryxdesign/core/Section'
+import { Heading, Text } from '@astryxdesign/core/Text'
 import type { ParsedResult, QRResult } from '../types/qr'
 import { getHostname, isShortenedUrl } from '../utils/urlSafety'
 
@@ -38,65 +46,99 @@ function ResultPanel({ result, error, parsed, copied, onCopy, onRequestOpen }: R
   }
 
   const isShort = parsed?.link ? isShortenedUrl(parsed.link) : false
+  const copyStatus = [copied, linkCopied].filter(Boolean).join(' · ')
 
   return (
-    <section className="panel" aria-live="polite" id="out">
-      {!result && !error && (
-        <p className="idle">Acá vas a ver el contenido del QR: su tipo, los datos ordenados y el texto original.</p>
-      )}
-      {error && <p className="err">{error}</p>}
-      {parsed && result && (
-        <>
-          <h2 className="type">{parsed.type}</h2>
-          <p className="sub">{parsed.sub}</p>
-          {parsed.fields.length > 0 && (
-            <dl>
-              {parsed.fields.map(([k, v], i) => (
-                <>
-                  <dt key={`dt-${i}`}>{k}</dt>
-                  <dd key={`dd-${i}`}>{v}</dd>
-                </>
-              ))}
-            </dl>
-          )}
-          {parsed.link && (
-            <div style={{ marginBottom: '16px' }}>
-              <div style={{ color: 'var(--muted)', fontSize: '0.9rem', marginBottom: '6px' }}>URL completa</div>
-              <pre className="raw" style={{ maxHeight: '90px' }}>
-                {parsed.link}
-              </pre>
-              {isShort && (
-                <p className="note">Este enlace usa un acortador ({getHostname(parsed.link)}). Puede redirigir a otra página con anuncios o trackers.</p>
-              )}
-            </div>
-          )}
-          {parsed.notes?.map((n, i) => (
-            <p key={i} className="note">
-              {n}
-            </p>
-          ))}
-          <pre className="raw">{result.data}</pre>
-          <div className="row">
-            <button className="primary" onClick={onCopy}>
-              Copiar contenido
-            </button>
-            {parsed.link && (
-              <>
-                <button onClick={() => onRequestOpen(parsed.link!)}>Abrir enlace</button>
-                <button onClick={copyLink}>Copiar enlace</button>
-              </>
+    <Section id="out" padding={5} aria-live="polite">
+      <VStack gap={4}>
+        {!result && !error && (
+          <EmptyState
+            headingLevel={2}
+            isCompact
+            title="Sin resultado todavía"
+            description="Acá vas a ver el contenido del QR: su tipo, los datos ordenados y el texto original."
+          />
+        )}
+
+        {error && <Banner status="error" title={error} container="section" />}
+
+        {parsed && result && (
+          <>
+            <VStack gap={0.5}>
+              <Heading level={2}>{parsed.type}</Heading>
+              <Text type="supporting" color="secondary">{parsed.sub}</Text>
+            </VStack>
+
+            {parsed.fields.length > 0 && (
+              <MetadataList label={{ position: 'start' }}>
+                {parsed.fields.map(([key, value], index) => (
+                  <MetadataListItem key={`${key}-${index}`} label={key}>
+                    <Text type="code" wordBreak="break-all">{value}</Text>
+                  </MetadataListItem>
+                ))}
+              </MetadataList>
             )}
-          </div>
-          <p className="live">
-            {copied}
-            {linkCopied ? (copied ? ' · ' + linkCopied : linkCopied) : ''}
-          </p>
-          <p className="sub" style={{ margin: '12px 0 0' }}>
-            Versión QR {result.version} · {result.data.length} caracteres
-          </p>
-        </>
-      )}
-    </section>
+
+            {parsed.link && (
+              <VStack gap={2}>
+                <Text type="label" color="secondary">URL completa</Text>
+                <CodeBlock
+                  code={parsed.link}
+                  title="URL completa"
+                  size="sm"
+                  isWrapped
+                  hasLanguageLabel={false}
+                  hasCopyButton={false}
+                  container="section"
+                  width="100%"
+                />
+                {isShort && (
+                  <Banner
+                    status="warning"
+                    title="Este enlace usa un acortador"
+                    description={`${getHostname(parsed.link)} puede redirigir a otra página con anuncios o trackers.`}
+                    container="section"
+                  />
+                )}
+              </VStack>
+            )}
+
+            {parsed.notes?.map((note, index) => (
+              <Banner key={index} status="warning" title={note} container="section" />
+            ))}
+
+            <CodeBlock
+              code={result.data}
+              title="Contenido original"
+              isWrapped
+              hasLanguageLabel={false}
+              hasCopyButton={false}
+              container="section"
+              width="100%"
+            />
+
+            <HStack gap={2} wrap="wrap">
+              <Button label="Copiar contenido" variant="primary" onClick={onCopy} />
+              {parsed.link && (
+                <>
+                  <Button label="Abrir enlace" onClick={() => onRequestOpen(parsed.link!)} />
+                  <Button label="Copiar enlace" onClick={copyLink} />
+                </>
+              )}
+            </HStack>
+
+            <VStack gap={0.5}>
+              <Text type="supporting" color="accent" role="status" aria-live="polite">
+                {copyStatus}
+              </Text>
+              <Text type="supporting" color="secondary">
+                Versión QR {result.version} · {result.data.length} caracteres
+              </Text>
+            </VStack>
+          </>
+        )}
+      </VStack>
+    </Section>
   )
 }
 

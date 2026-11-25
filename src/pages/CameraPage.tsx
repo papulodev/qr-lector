@@ -1,3 +1,6 @@
+import { useState } from 'react'
+import { VStack } from '@astryxdesign/core/Stack'
+import { Heading, Text } from '@astryxdesign/core/Text'
 import CameraScanner from '../components/CameraScanner'
 import ResultPanel from '../components/ResultPanel'
 import HistoryPanel from '../components/HistoryPanel'
@@ -6,7 +9,6 @@ import { parseQR } from '../utils/parseQR'
 import { saveToHistory } from '../utils/history'
 import type { QRResult } from '../types/qr'
 import type { HistoryItem } from '../types/history'
-import { useState } from 'react'
 
 function CameraPage() {
   const [result, setResult] = useState<QRResult | null>(null)
@@ -78,18 +80,20 @@ function CameraPage() {
   const parsed = result ? parseQR(result.data) : null
 
   return (
-    <>
-      <main>
-        <h1>Escanear con cámara</h1>
-        <p className="lead">
+    <VStack gap={6}>
+      <VStack gap={2} maxWidth="70ch">
+        <Heading level={1}>Escanear con cámara</Heading>
+        <Text as="p" type="large" color="secondary">
           Apuntá la cámara a un código QR para leerlo al instante. Funciona mejor con buena iluminación.
-        </p>
-        <CameraScanner onDetect={handleCameraDetect} />
-        <ResultPanel result={result} error={error} parsed={parsed} copied={copied} onCopy={copyContent} onRequestOpen={requestOpen} />
-        <HistoryPanel key={historyKey} onSelect={onSelectHistory} />
-      </main>
+        </Text>
+      </VStack>
+
+      <CameraScanner onDetect={handleCameraDetect} />
+      <ResultPanel result={result} error={error} parsed={parsed} copied={copied} onCopy={copyContent} onRequestOpen={requestOpen} />
+      <HistoryPanel key={historyKey} onSelect={onSelectHistory} />
+
       <ConfirmOpenModal url={pendingUrl} open={showModal} onConfirm={confirmOpen} onCancel={cancelOpen} />
-    </>
+    </VStack>
   )
 }
 
