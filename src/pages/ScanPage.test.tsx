@@ -55,6 +55,17 @@ describe('ScanPage image loading', () => {
     document.body.appendChild(container)
     root = createRoot(container)
 
+    mockJsQR.mockReset()
+    mockJsQR.mockReturnValue({
+      data: qrData,
+      version: 3,
+      location: {
+        topLeftCorner: { x: 0, y: 0 },
+        topRightCorner: { x: 12, y: 0 },
+        bottomRightCorner: { x: 12, y: 12 },
+        bottomLeftCorner: { x: 0, y: 12 },
+      },
+    })
     vi.stubGlobal('Image', FakeImage)
     Object.defineProperty(URL, 'createObjectURL', {
       value: vi.fn(() => 'blob:qr-test'),
@@ -118,5 +129,54 @@ describe('ScanPage image loading', () => {
     expect(container.querySelector('[data-qr-canvas]')).not.toBeNull()
     expect(fakeContext.drawImage).toHaveBeenCalled()
     expect(document.body.textContent).toContain(qrData)
+  })
+
+  it('muestra todos los códigos detectados y permite seleccionar uno', async () => {
+    const secondData = 'https://example.com/segundo-qr'
+    mockJsQR
+      .mockReturnValueOnce({
+        data: qrData,
+        version: 3,
+        location: {
+          topLeftCorner: { x: 0, y: 0 },
+          topRightCorner: { x: 12, y: 0 },
+          bottomRightCorner: { x: 12, y: 12 },
+          bottomLeftCorner: { x: 0, y: 12 },
+        },
+      })
+      .mockReturnValueOnce({
+        data: secondData,
+        version: 4,
+        location: {
+          topLeftCorner: { x: 100, y: 100 },
+          topRightCorner: { x: 112, y: 100 },
+          bottomRightCorner: { x: 112, y: 112 },
+          bottomLeftCorner: { x: 100, y: 112 },
+        },
+      })
+      .mockReturnValue(null)
+
+    await act(async () => {
+      root.render(<ScanPage />)
+    })
+
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement
+    await act(async () => {
+      Object.defineProperty(input, 'files', { value: [imageFile()], configurable: true })
+      input.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+
+    expect(document.body.textContent).toContain('2 códigos encontrados')
+    expect(document.body.textContent).toContain(qrData)
+
+    const secondResult = Array.from(container.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('QR 2'),
+    )
+    expect(secondResult).toBeDefined()
+
+    await act(async () => {
+      secondResult!.click()
+    })
+    expect(document.body.textContent).toContain(secondData)
   })
 })
