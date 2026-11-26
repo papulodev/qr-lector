@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Pregunta / Discusión
+    url: https://github.com/papulodev/qr-lector/discussions
+    about: Para preguntas generales, dudas de uso o discusiones abiertas
+  - name: 🔒 Reporte de seguridad
+    url: https://github.com/papulodev/qr-lector/security/advisories/new
+    about: Reporta vulnerabilidades de forma privada

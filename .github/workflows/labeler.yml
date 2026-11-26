@@ -1,0 +1,62 @@
+name: Labeler
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+  issues:
+    types: [opened, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  labeler:
+    name: Auto-label PR/Issue
+    runs-on: ubuntu-latest
+    steps:
+      - name: Auto-label based on changed files
+        uses: actions/labeler@v5
+        if: github.event_name == 'pull_request'
+        with:
+          repo-token: "${{ secrets.GITHUB_TOKEN }}"
+          configuration-path: .github/labeler.yml
+          sync-labels: true
+
+  validate-labels:
+    name: Validate required labels
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Check PR has required labels
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo, number } = context.payload.pull_request ? context.payload : context.issue;
+            const prNumber = context.payload.pull_request?.number || context.payload.number;
+            
+            const labels = await github.rest.issues.listLabelsOnIssue({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber
+            });
+            
+            const labelNames = labels.data.map(l => l.name);
+            
+            // Required label categories for PRs
+            const typeLabels = ['bug', 'enhancement', 'documentation', 'refactor', 'performance', 'test', 'chore', 'config'];
+            const hasTypeLabel = labelNames.some(l => typeLabels.includes(l));
+            
+            if (!hasTypeLabel) {
+              const msg = `❌ **PR debe tener al menos una etiqueta de tipo:**\n${typeLabels.map(l => `- \`${l}\``).join('\n')}`;
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: msg
+              });
+              core.setFailed('Missing required type label');
+            } else {
+              console.log('✅ PR has required type label:', labelNames.filter(l => typeLabels.includes(l)));
+            }

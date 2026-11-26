@@ -1,0 +1,70 @@
+# Auto-label PRs based on changed files
+# See https://github.com/actions/labeler
+
+# Documentation
+documentation:
+  - "*.md"
+  - "docs/**"
+  - "README*"
+  - "CHANGELOG*"
+
+# Dependencies
+dependencies:
+  - "package.json"
+  - "pnpm-lock.yaml"
+  - ".github/dependabot.yml"
+
+# CI / Build / Config
+ci:
+  - ".github/workflows/**"
+  - "vite.config.ts"
+  - "tsconfig*.json"
+  - "eslint.config.js"
+  - ".prettierrc*"
+
+# Tests
+tests:
+  - "**/*.test.ts"
+  - "**/*.test.tsx"
+  - "**/*.spec.ts"
+  - "**/*.spec.tsx"
+  - "vitest.config.ts"
+
+# Types
+types:
+  - "src/types/**"
+
+# Utilities
+utilities:
+  - "src/utils/**"
+
+# Components
+components:
+  - "src/components/**"
+
+# Pages / Routing
+pages:
+  - "src/pages/**"
+
+# Hooks
+hooks:
+  - "src/hooks/**"
+
+# Styles
+styles:
+  - "*.css"
+  - "*.scss"
+  - "tailwind.config.*"
+
+# App entry
+app:
+  - "src/main.tsx"
+  - "src/App.tsx"
+  - "index.html"
+
+# Configuration files
+config:
+  - "*.config.*"
+  - ".env*"
+  - ".gitignore"
+  - ".editorconfig"
