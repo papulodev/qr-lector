@@ -30,7 +30,7 @@ jobs:
     if: github.event_name == 'pull_request'
     steps:
       - name: Check PR has required labels
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const { owner, repo, number } = context.payload.pull_request ? context.payload : context.issue;
