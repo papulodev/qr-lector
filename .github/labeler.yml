@@ -3,68 +3,87 @@
 
 # Documentation
 documentation:
-  - "*.md"
-  - "docs/**"
-  - "README*"
-  - "CHANGELOG*"
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*.md"
+          - "docs/**"
+          - "README*"
+          - "CHANGELOG*"
 
 # Dependencies
 dependencies:
-  - "package.json"
-  - "pnpm-lock.yaml"
-  - ".github/dependabot.yml"
+  - changed-files:
+      - any-glob-to-any-file:
+          - "package.json"
+          - "pnpm-lock.yaml"
+          - ".github/dependabot.yml"
 
 # CI / Build / Config
 ci:
-  - ".github/workflows/**"
-  - "vite.config.ts"
-  - "tsconfig*.json"
-  - "eslint.config.js"
-  - ".prettierrc*"
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/workflows/**"
+          - "vite.config.ts"
+          - "tsconfig*.json"
+          - "eslint.config.js"
+          - ".prettierrc*"
 
 # Tests
 tests:
-  - "**/*.test.ts"
-  - "**/*.test.tsx"
-  - "**/*.spec.ts"
-  - "**/*.spec.tsx"
-  - "vitest.config.ts"
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*.test.ts"
+          - "**/*.test.tsx"
+          - "**/*.spec.ts"
+          - "**/*.spec.tsx"
+          - "vitest.config.ts"
 
 # Types
 types:
-  - "src/types/**"
+  - changed-files:
+      - any-glob-to-any-file: "src/types/**"
 
 # Utilities
 utilities:
-  - "src/utils/**"
+  - changed-files:
+      - any-glob-to-any-file: "src/utils/**"
 
 # Components
 components:
-  - "src/components/**"
+  - changed-files:
+      - any-glob-to-any-file: "src/components/**"
 
 # Pages / Routing
 pages:
-  - "src/pages/**"
+  - changed-files:
+      - any-glob-to-any-file: "src/pages/**"
 
 # Hooks
 hooks:
-  - "src/hooks/**"
+  - changed-files:
+      - any-glob-to-any-file: "src/hooks/**"
 
 # Styles
 styles:
-  - "*.css"
-  - "*.scss"
-  - "tailwind.config.*"
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*.css"
+          - "**/*.scss"
+          - "tailwind.config.*"
 
 # App entry
 app:
-  - "src/main.tsx"
-  - "src/App.tsx"
-  - "index.html"
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/main.tsx"
+          - "src/App.tsx"
+          - "index.html"
 
 # Configuration files
 config:
-  - "*.config.*"
-  - ".env*"
-  - ".gitignore"
-  - ".editorconfig"
+  - changed-files:
+      - any-glob-to-any-file:
+          - "*.config.*"
+          - ".env*"
+          - ".gitignore"
+          - ".editorconfig"
