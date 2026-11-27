@@ -1,20 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import jsQR from 'jsqr'
 import { FileInput } from '@astryxdesign/core/FileInput'
 import { Grid } from '@astryxdesign/core/Grid'
 import { Section } from '@astryxdesign/core/Section'
 import { VStack } from '@astryxdesign/core/Stack'
 import { Heading, Text } from '@astryxdesign/core/Text'
 import ResultPanel from '../components/ResultPanel'
+import ResultsList from '../components/ResultsList'
 import HistoryPanel from '../components/HistoryPanel'
 import ConfirmOpenModal from '../components/ConfirmOpenModal'
+import { decodeImageMultiple } from '../utils/decodeQR'
 import { parseQR } from '../utils/parseQR'
 import { saveToHistory } from '../utils/history'
 import type { QRResult } from '../types/qr'
 import type { HistoryItem } from '../types/history'
 
-type DecodeHit = { result: QRResult; scale: number }
-type Preview = { img: HTMLImageElement; hit: DecodeHit | null }
+type Preview = { img: HTMLImageElement; results: QRResult[] }
 
 function ScanPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -23,40 +23,20 @@ function ScanPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [hasImg, setHasImg] = useState(false)
   const [previewVersion, setPreviewVersion] = useState(0)
-  const [result, setResult] = useState<QRResult | null>(null)
+  const [results, setResults] = useState<QRResult[]>([])
+  const [selectedIndex, setSelectedIndex] = useState(0)
   const [error, setError] = useState<string>('')
   const [copied, setCopied] = useState<string>('')
   const [pendingUrl, setPendingUrl] = useState<string>('')
   const [showModal, setShowModal] = useState(false)
   const [historyKey, setHistoryKey] = useState(0)
 
-  const decodeImage = useCallback((img: HTMLImageElement): DecodeHit | null => {
-    for (const m of [1600, 900, 500]) {
-      const maxDim = Math.max(img.width, img.height)
-      const s = Math.min(1, m / maxDim)
-      const w = Math.round(img.width * s)
-      const h = Math.round(img.height * s)
-      const c = document.createElement('canvas')
-      c.width = w
-      c.height = h
-      const ctx = c.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D | null
-      if (!ctx) continue
-      ctx.drawImage(img, 0, 0, w, h)
-      const imageData = ctx.getImageData(0, 0, w, h)
-      const r = jsQR(imageData.data, w, h, { inversionAttempts: 'attemptBoth' })
-      if (r) {
-        return { result: { data: r.data, version: r.version, location: r.location }, scale: s }
-      }
-    }
-    return null
-  }, [])
-
   const drawPreview = useCallback(() => {
     const preview = previewRef.current
     const cv = canvasRef.current
     if (!preview || !cv) return
 
-    const { img, hit } = preview
+    const { img, results } = preview
     const p = Math.min(1, 800 / Math.max(img.width, img.height))
     cv.width = Math.round(img.width * p)
     cv.height = Math.round(img.height * p)
@@ -65,24 +45,26 @@ function ScanPage() {
 
     ctx.clearRect(0, 0, cv.width, cv.height)
     ctx.drawImage(img, 0, 0, cv.width, cv.height)
-    if (!hit) return
+    if (results.length === 0) return
 
-    const L = hit.result.location
-    const k = p / hit.scale
-    const pts = [L.topLeftCorner, L.topRightCorner, L.bottomRightCorner, L.bottomLeftCorner]
     const accent = getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim()
       || getComputedStyle(cv).color
     ctx.lineWidth = Math.max(3, cv.width / 120)
     ctx.strokeStyle = accent
-    ctx.beginPath()
-    pts.forEach((pt, i) => {
-      const x = pt.x * k
-      const y = pt.y * k
-      if (i === 0) ctx.moveTo(x, y)
-      else ctx.lineTo(x, y)
+
+    results.forEach((result) => {
+      const location = result.location
+      const corners = [location.topLeftCorner, location.topRightCorner, location.bottomRightCorner, location.bottomLeftCorner]
+      ctx.beginPath()
+      corners.forEach((corner, index) => {
+        const x = corner.x * p
+        const y = corner.y * p
+        if (index === 0) ctx.moveTo(x, y)
+        else ctx.lineTo(x, y)
+      })
+      ctx.closePath()
+      ctx.stroke()
     })
-    ctx.closePath()
-    ctx.stroke()
   }, [])
 
   useEffect(() => {
@@ -90,27 +72,31 @@ function ScanPage() {
   }, [hasImg, previewVersion, drawPreview])
 
   const processImage = useCallback((img: HTMLImageElement) => {
-    const hit = decodeImage(img)
-    previewRef.current = { img, hit }
+    const decoded = decodeImageMultiple(img)
+    previewRef.current = { img, results: decoded }
     setPreviewVersion((version) => version + 1)
     setHasImg(true)
+    setSelectedIndex(0)
+    setCopied('')
 
-    if (!hit) {
+    if (decoded.length === 0) {
       setError('No encontramos un código QR en la imagen. Probá con una foto más nítida y que el QR ocupe buena parte del encuadre.')
-      setResult(null)
+      setResults([])
       return
     }
     setError('')
-    setResult(hit.result)
-    const parsedHit = parseQR(hit.result.data)
-    saveToHistory({
-      data: hit.result.data,
-      parsedType: parsedHit.type,
-      parsedSub: parsedHit.sub,
-      link: parsedHit.link,
+    setResults(decoded)
+    decoded.forEach((result) => {
+      const parsedHit = parseQR(result.data)
+      saveToHistory({
+        data: result.data,
+        parsedType: parsedHit.type,
+        parsedSub: parsedHit.sub,
+        link: parsedHit.link,
+      })
     })
     setHistoryKey((k) => k + 1)
-  }, [decodeImage])
+  }, [])
 
   const handleFile = useCallback((f: File) => {
     setSelectedFile(f)
@@ -118,7 +104,8 @@ function ScanPage() {
     setCopied('')
     if (!f.type.startsWith('image/')) {
       setError('El archivo no es una imagen. Probá con PNG, JPG o WebP.')
-      setResult(null)
+      setResults([])
+      setSelectedIndex(0)
       setHasImg(false)
       return
     }
@@ -130,7 +117,8 @@ function ScanPage() {
     }
     img.onerror = () => {
       setError('No se pudo abrir la imagen.')
-      setResult(null)
+      setResults([])
+      setSelectedIndex(0)
       setHasImg(false)
     }
     img.src = url
@@ -158,7 +146,13 @@ function ScanPage() {
     if (file) handleFile(file)
   }
 
+  const selectResult = (index: number) => {
+    setSelectedIndex(index)
+    setCopied('')
+  }
+
   const copyContent = async () => {
+    const result = results[selectedIndex]
     if (!result) return
     try {
       await navigator.clipboard.writeText(result.data)
@@ -197,7 +191,8 @@ function ScanPage() {
   }
 
   const onSelectHistory = (item: HistoryItem) => {
-    setResult({ data: item.data, version: 0, location: { topLeftCorner: { x: 0, y: 0 }, topRightCorner: { x: 0, y: 0 }, bottomRightCorner: { x: 0, y: 0 }, bottomLeftCorner: { x: 0, y: 0 } } })
+    setResults([{ data: item.data, version: 0, location: { topLeftCorner: { x: 0, y: 0 }, topRightCorner: { x: 0, y: 0 }, bottomRightCorner: { x: 0, y: 0 }, bottomLeftCorner: { x: 0, y: 0 } } }])
+    setSelectedIndex(0)
     setError('')
     setCopied('')
     setHasImg(false)
@@ -211,7 +206,8 @@ function ScanPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const parsed = result ? parseQR(result.data) : null
+  const selectedResult = results[selectedIndex] ?? null
+  const parsed = selectedResult ? parseQR(selectedResult.data) : null
 
   return (
     <VStack gap={6}>
@@ -219,7 +215,7 @@ function ScanPage() {
         <Heading level={1}>Lector de QR</Heading>
         <Text as="p" type="large" color="secondary">
           Cargá una imagen con un código QR y mirá qué contiene. Todo se procesa en tu navegador: la imagen no
-          se sube a ningún servidor.
+          se sube a ningún servidor. Se detectan múltiples códigos QR en la misma imagen y se guardan en el historial para que puedas revisarlos más tarde.
         </Text>
       </VStack>
 
@@ -245,7 +241,12 @@ function ScanPage() {
             </Section>
           )}
         </VStack>
-        <ResultPanel result={result} error={error} parsed={parsed} copied={copied} onCopy={copyContent} onRequestOpen={requestOpen} />
+        <VStack gap={4}>
+          {results.length > 0 && (
+            <ResultsList results={results} selectedIndex={selectedIndex} onSelect={selectResult} />
+          )}
+          <ResultPanel result={selectedResult} error={error} parsed={parsed} copied={copied} onCopy={copyContent} onRequestOpen={requestOpen} />
+        </VStack>
       </Grid>
 
       <HistoryPanel key={historyKey} onSelect={onSelectHistory} />
